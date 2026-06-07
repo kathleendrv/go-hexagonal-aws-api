@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"go-hexagonal-api/internal/core/ports"
 	"net/http"
 	"strconv"
