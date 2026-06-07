@@ -21,7 +21,8 @@ import (
 var lambdaAdapter *httpadapter.HandlerAdapter
 
 func init() {
-	// 1. Obtener cadena de conexión (Neon en producción, Localhost en desarrollo)
+	log.Println("🚀 Iniciando Lambda v2 - Comprobando conexión...")
+
 	connStr := os.Getenv("DATABASE_URL")
 	if connStr == "" {
 		connStr = "postgres://postgres:123@localhost:5432/api_hexagonal?sslmode=disable"
@@ -29,29 +30,32 @@ func init() {
 
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("❌ ERROR en sql.Open: %v", err)
+		panic(err)
 	}
 
+	// Forzar el ping y capturar el error real
 	if err = db.Ping(); err != nil {
-		log.Fatal("No se pudo conectar a la base de datos:", err)
+		log.Printf("❌ ERROR de conexión a Postgres (Neon): %v", err)
+		// Al hacer panic, AWS se ve obligado a registrar el desplome en CloudWatch
+		panic(fmt.Sprintf("Fallo crítico de base de datos: %v", err)) 
 	}
 
-	// 2. Inyección de Dependencias (Arquitectura Hexagonal)
+	log.Println("✅ Conexión a base de datos exitosa.")
+
+	// Inyección de Dependencias
 	userRepo := repository.NewPostgresRepository(db)
 	userService := service.NewUserService(userRepo)
 	userHandler := handler.NewHttpUserHandler(userService)
 	uploadHandler := handler.NewUploadHandler("./uploads")
 
-	// 3. Definición de Rutas en el Multiplexer estándar de Go
+	// Rutas
 	http.HandleFunc("/register", userHandler.Register)
 	http.HandleFunc("/login", userHandler.Login)
 	http.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
-	
-	// Rutas Protegidas
 	http.HandleFunc("/users", handler.JWTMiddleware(userHandler.HandleUsers))
 	http.HandleFunc("/upload", handler.JWTMiddleware(uploadHandler.UploadFile))
 
-	// 4. Inicializar el adaptador proxy para AWS Lambda usando el DefaultServeMux
 	lambdaAdapter = httpadapter.New(http.DefaultServeMux)
 }
 

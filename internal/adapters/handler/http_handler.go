@@ -56,10 +56,15 @@ func (h *HttpUserHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, err := h.service.Register(req.Name, req.Email, req.Password)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+// Dentro de tu método Register en el Handler de Go:
+if err != nil {
+    w.WriteHeader(http.StatusInternalServerError)
+    // 💡 IMPORTANTE: Esto le mandará el mensaje real (ej. "relation 'users' does not exist") a Flutter
+    json.NewEncoder(w).Encode(map[string]string{
+        "error": fmt.Sprintf("Error en el núcleo de Go: %v", err),
+    })
+    return
+}
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(user)
 }
