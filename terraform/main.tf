@@ -21,7 +21,7 @@ resource "aws_iam_role_policy_attachment" "lambda_logs" {
 # 2. La Función Lambda (Recibe el archivo zip compilado en Go)
 resource "aws_lambda_function" "api_lambda" {
   filename         = "../bootstrap.zip" # Creado por GitHub Actions
-  function_name    = "go-hexagonal-api"
+  function_name    = "go-hexagonal-api-v3"
   role             = aws_iam_role.lambda_role.arn
   handler          = "bootstrap"        # Obligatorio para lambdas de Go en formato al2023
   runtime          = "provided.al2023"  # Entorno Linux optimizado de AWS
@@ -43,7 +43,7 @@ resource "aws_cloudwatch_log_group" "lambda_log_group" {
 
 # 3. API Gateway (Para exponer la Lambda al mundo/Flutter)
 resource "aws_apigatewayv2_api" "http_api" {
-  name          = "go-hexagonal-gateway"
+  name          = "go-hexagonal-gateway-v3"
   protocol_type = "HTTP"
 }
 
