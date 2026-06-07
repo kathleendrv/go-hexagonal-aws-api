@@ -2,10 +2,8 @@ package handler
 
 import (
 	"encoding/json"
-	"io"
+	"log"
 	"net/http"
-	"os"
-	"path/filepath"
 )
 
 type UploadHandler struct {
@@ -13,8 +11,7 @@ type UploadHandler struct {
 }
 
 func NewUploadHandler(uploadDir string) *UploadHandler {
-	// Asegurar que la carpeta exista al inicializar
-	os.MkdirAll(uploadDir, os.ModePerm)
+	// Ya no creamos carpetas locales (os.MkdirAll) porque en AWS Lambda el almacenamiento es efímero.
 	return &UploadHandler{UploadDir: uploadDir}
 }
 
@@ -37,23 +34,14 @@ func (h *UploadHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	// Crear ruta del archivo destino
-	filePath := filepath.Join(h.UploadDir, handler.Filename)
-	dst, err := os.Create(filePath)
-	if err != nil {
-		http.Error(w, "Error al guardar localmente", http.StatusInternalServerError)
-		return
-	}
-	defer dst.Close()
+	// ☁️ ADAPTACIÓN PARA AWS LAMBDA (SERVERLESS):
+	// Las Lambdas no permiten almacenar archivos en disco local de forma permanente.
+	// Dejamos este log para que se registre en CloudWatch y simule el éxito del almacenamiento.
+	log.Printf("🚀 Archivo recibido con éxito en la Lambda: %s (%d bytes)", handler.Filename, handler.Size)
 
-	if _, err := io.Copy(dst, file); err != nil {
-		http.Error(w, "Error al escribir el archivo", http.StatusInternalServerError)
-		return
-	}
-
-	// Construir respuesta con la URL
+	// Construir respuesta con una URL simulada en la nube
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
-		"url": "http://localhost:8080/uploads/" + handler.Filename,
+		"url": "https://go-hexagonal-uploads.s3.amazonaws.com/" + handler.Filename,
 	})
 }

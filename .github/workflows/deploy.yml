@@ -1,0 +1,53 @@
+name: Deploy API to AWS Lambda
+
+on:
+  push:
+    branches: [ main ] # Se ejecuta al hacer push a main
+
+jobs:
+  deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup Go
+      uses: actions/tools/setup-go@v5
+      with:
+        go-version: '1.22'
+
+    # 1. Compilar para AWS Lambda (Debe llamarse bootstrap y ser Linux)
+    - name: Build Backend
+      run: |
+        GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o bootstrap main.go
+        zip bootstrap.zip bootstrap
+
+    # 2. Configurar las credenciales secretas de AWS
+    - name: Configure AWS Credentials
+      uses: aws/actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    # 3. Despliegue con Terraform
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+
+    - name: Terraform Init
+      run: terraform init
+      working-directory: ./terraform
+
+    - name: Terraform Validate
+      run: terraform validate
+      working-directory: ./terraform
+
+    - name: Terraform Plan
+      run: terraform plan -var="database_url=${{ secrets.DATABASE_URL }}" -var="jwt_secret=${{ secrets.JWT_SECRET }}"
+      working-directory: ./terraform
+
+    - name: Terraform Apply
+      run: terraform apply -auto-approve -var="database_url=${{ secrets.DATABASE_URL }}" -var="jwt_secret=${{ secrets.JWT_SECRET }}"
+      working-directory: ./terraform
