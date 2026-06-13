@@ -137,7 +137,7 @@ resource "aws_sns_topic_subscription" "sns_to_sqs" {
 resource "aws_lambda_function" "notification_lambda" {
   filename         = "../notification_bootstrap.zip" # Este ZIP lo creará GitHub Actions
   function_name    = "notification-lambda-${random_string.suffix.result}"
-  role             = aws_iam_role.lambda_exec_role.arn # Reutilizamos el rol existente
+  role             = aws_iam_role.lambda_role.arn # Reutilizamos el rol existente
   handler          = "bootstrap"
   runtime          = "provided.al2023"
   architectures    = ["x86_64"]
@@ -152,7 +152,7 @@ resource "aws_cloudwatch_log_group" "notification_log_group" {
 
 # Permisos para que SQS pueda activar a la Lambda de Notificaciones
 resource "aws_iam_role_policy_attachment" "lambda_sqs_execution" {
-  role       = aws_iam_role.lambda_exec_role.name
+  role       = aws_iam_role.lambda_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole"
 }
 
