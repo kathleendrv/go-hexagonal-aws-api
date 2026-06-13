@@ -38,6 +38,7 @@ resource "aws_lambda_function" "api_lambda" {
     variables = {
       DATABASE_URL = var.database_url
       JWT_SECRET   = var.jwt_secret
+      SNS_TOPIC_ARN = aws_sns_topic.user_notifications.arn
     }
   }
 }
@@ -165,13 +166,29 @@ resource "aws_lambda_event_source_mapping" "sqs_trigger" {
   batch_size       = 10 # Procesa hasta 10 mensajes juntos
 }
 
-# Enviar el ARN de SNS como variable de entorno a la Lambda Principal 
-# Busca tu recurso actual "aws_lambda_function" (la de tu backend de Go) 
-# y asegúrate de agregar esta variable dentro del bloque environment:
-# environment {
-#   variables = {
-#     DATABASE_URL = var.database_url
-#     JWT_SECRET   = var.jwt_secret
-#     SNS_TOPIC_ARN = aws_sns_topic.user_notifications.arn  <-- ¡ESTA LÍNEA!
-#   }
-# }
+# =========================================================================
+# 6. PERMISOS DE PUBLICACIÓN (API Lambda ➔ SNS)
+# =========================================================================
+resource "aws_iam_policy" "lambda_sns_publish_policy" {
+  name        = "go-hexagonal-sns-publish-policy-${random_string.suffix.result}"
+  description = "Permite que la Lambda del backend publique mensajes en SNS"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = [
+          "sns:Publish"
+        ]
+        Resource = aws_sns_topic.user_notifications.arn
+      }
+    ]
+  })
+}
+
+# Adjuntar la política al rol que comparten tus Lambdas
+resource "aws_iam_role_policy_attachment" "lambda_sns_attachment" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = aws_iam_policy.lambda_sns_publish_policy.arn
+}
