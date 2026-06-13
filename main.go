@@ -4,12 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"go-hexagonal-api/internal/adapters/handler"
-	"go-hexagonal-api/internal/adapters/repository"
-	"go-hexagonal-api/internal/core/service"
 	"log"
 	"net/http"
 	"os"
+
+	"go-hexagonal-api/internal/adapters/handler"
+	"go-hexagonal-api/internal/adapters/repository"
+	"go-hexagonal-api/internal/core/service"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -37,7 +38,6 @@ func init() {
 	// Forzar el ping y capturar el error real
 	if err = db.Ping(); err != nil {
 		log.Printf("ERROR de conexión a Postgres (Neon): %v", err)
-		// Al hacer panic, AWS se ve obligado a registrar el desplome en CloudWatch
 		panic(fmt.Sprintf("Fallo crítico de base de datos: %v", err)) 
 	}
 
@@ -49,15 +49,20 @@ func init() {
 	userHandler := handler.NewHttpUserHandler(userService)
 	uploadHandler := handler.NewUploadHandler("./uploads")
 
+	// nicializamos primero el Handler de Notificaciones SNS
+	notifHandler := handler.NewNotificationHandler()
+
 	// Rutas
 	http.HandleFunc("/register", userHandler.Register)
 	http.HandleFunc("/login", userHandler.Login)
 	http.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
 	http.HandleFunc("/users", handler.JWTMiddleware(userHandler.HandleUsers))
 	http.HandleFunc("/upload", handler.JWTMiddleware(uploadHandler.UploadFile))
-    http.HandleFunc("/notifications/send", notifHandler.SendNotification)
+	
+	// Ahora sí usamos el notifHandler correctamente inicializado arriba
+	http.HandleFunc("/notifications/send", notifHandler.SendNotification)
+	
 	lambdaAdapter = httpadapter.New(http.DefaultServeMux)
-	notifHandler := handler.NewNotificationHandler()
 }
 
 // Handler que interactúa directamente con AWS API Gateway

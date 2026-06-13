@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	"GO-HEXAGONAL-API/internal/core/domain" // Asegúrate de que coincida con tu módulo de go.mod
+	"go-hexagonal-api/internal/core/domain" // Asegúrate de que coincida con tu módulo de go.mod
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
