@@ -34,10 +34,8 @@ func (h *UploadHandler) UploadFile(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	// ☁️ ADAPTACIÓN PARA AWS LAMBDA (SERVERLESS):
-	// Las Lambdas no permiten almacenar archivos en disco local de forma permanente.
-	// Dejamos este log para que se registre en CloudWatch y simule el éxito del almacenamiento.
-	log.Printf("🚀 Archivo recibido con éxito en la Lambda: %s (%d bytes)", handler.Filename, handler.Size)
+	// ADAPTACIÓN PARA AWS LAMBDA (SERVERLESS):
+	log.Printf(" Archivo recibido con éxito en la Lambda: %s (%d bytes)", handler.Filename, handler.Size)
 
 	// Construir respuesta con una URL simulada en la nube
 	w.Header().Set("Content-Type", "application/json")
