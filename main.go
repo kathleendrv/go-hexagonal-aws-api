@@ -21,7 +21,7 @@ import (
 var lambdaAdapter *httpadapter.HandlerAdapter
 
 func init() {
-	log.Println("🚀 Iniciando Lambda v2 - Comprobando conexión...")
+	log.Println("Iniciando Lambda v2 - Comprobando conexión...")
 
 	connStr := os.Getenv("DATABASE_URL")
 	if connStr == "" {
@@ -57,6 +57,7 @@ func init() {
 	http.HandleFunc("/upload", handler.JWTMiddleware(uploadHandler.UploadFile))
     http.HandleFunc("/notifications/send", notifHandler.SendNotification)
 	lambdaAdapter = httpadapter.New(http.DefaultServeMux)
+	notifHandler := handler.NewNotificationHandler()
 }
 
 // Handler que interactúa directamente con AWS API Gateway
@@ -65,7 +66,6 @@ func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.API
 }
 
 func main() {
-	notifHandler := handler.NewNotificationHandler()
 	// Si existe esta variable, significa que estamos ejecutándonos dentro de AWS Lambda
 	if os.Getenv("AWS_LAMBDA_FUNCTION_NAME") != "" {
 		lambda.Start(Handler)
