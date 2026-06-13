@@ -30,18 +30,18 @@ func init() {
 
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
-		log.Printf("❌ ERROR en sql.Open: %v", err)
+		log.Printf("ERROR en sql.Open: %v", err)
 		panic(err)
 	}
 
 	// Forzar el ping y capturar el error real
 	if err = db.Ping(); err != nil {
-		log.Printf("❌ ERROR de conexión a Postgres (Neon): %v", err)
+		log.Printf("ERROR de conexión a Postgres (Neon): %v", err)
 		// Al hacer panic, AWS se ve obligado a registrar el desplome en CloudWatch
 		panic(fmt.Sprintf("Fallo crítico de base de datos: %v", err)) 
 	}
 
-	log.Println("✅ Conexión a base de datos exitosa.")
+	log.Println("Conexión a base de datos exitosa.")
 
 	// Inyección de Dependencias
 	userRepo := repository.NewPostgresRepository(db)
@@ -55,7 +55,7 @@ func init() {
 	http.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
 	http.HandleFunc("/users", handler.JWTMiddleware(userHandler.HandleUsers))
 	http.HandleFunc("/upload", handler.JWTMiddleware(uploadHandler.UploadFile))
-
+    http.HandleFunc("/notifications/send", notifHandler.SendNotification)
 	lambdaAdapter = httpadapter.New(http.DefaultServeMux)
 }
 
@@ -65,6 +65,7 @@ func Handler(ctx context.Context, req events.APIGatewayProxyRequest) (events.API
 }
 
 func main() {
+	notifHandler := handler.NewNotificationHandler()
 	// Si existe esta variable, significa que estamos ejecutándonos dentro de AWS Lambda
 	if os.Getenv("AWS_LAMBDA_FUNCTION_NAME") != "" {
 		lambda.Start(Handler)
