@@ -24,6 +24,13 @@ jobs:
       run: |
         GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o bootstrap main.go
         zip bootstrap.zip bootstrap
+      
+    - name: Build Notification Lambda
+      run: |
+        cd notification-lambda
+        GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o bootstrap main.go
+        zip ../notification_bootstrap.zip bootstrap
+        cd ..
 
     # 3. Configurar las credenciales secretas de AWS (CORREGIDO)
     - name: Configure AWS Credentials
@@ -48,18 +55,6 @@ jobs:
     - name: Terraform Plan
       run: terraform plan -var="database_url=${{ secrets.DATABASE_URL }}" -var="jwt_secret=${{ secrets.JWT_SECRET }}"
       working-directory: ./terraform
-
-    - name: Build Backend Lambda
-      run: |
-        GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o bootstrap main.go
-        zip bootstrap.zip bootstrap
-
-      name: Build Notification Lambda
-      run: |
-        cd notification-lambda
-        GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o bootstrap main.go
-        zip ../notification_bootstrap.zip bootstrap
-        cd ..
 
     - name: Terraform Apply
       run: terraform apply -auto-approve -var="database_url=${{ secrets.DATABASE_URL }}" -var="jwt_secret=${{ secrets.JWT_SECRET }}"
