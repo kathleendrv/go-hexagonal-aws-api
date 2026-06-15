@@ -40,7 +40,7 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 		var snsMsg SNSMessage
 		err := json.Unmarshal([]byte(record.Body), &snsMsg)
 		if err != nil {
-			log.Printf("❌ Error al decodificar estructura SNS: %v", err)
+			log.Printf("Error al decodificar estructura SNS: %v", err)
 			continue
 		}
 
@@ -48,11 +48,11 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 		var emailData EmailPayload
 		err = json.Unmarshal([]byte(snsMsg.Message), &emailData)
 		if err != nil {
-			log.Printf("❌ Error al decodificar Payload de correo: %v", err)
+			log.Printf("Error al decodificar Payload de correo: %v", err)
 			continue
 		}
 
-		log.Printf("📧 Intentando enviar correo electrónico real mediante SES a: %s", emailData.Email)
+		log.Printf("Intentando enviar correo electrónico real mediante SES a: %s", emailData.Email)
 
 		// 4. Construimos la estructura de envío real hacia el servidor de Amazon SES
 		input := &ses.SendEmailInput{
@@ -71,7 +71,7 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 					Charset: aws.String("UTF-8"),
 				},
 			},
-			// 🚨 NOTA IMPORTANTE: En el modo Sandbox de AWS SES, el "Source" (Remitente)
+			// NOTA IMPORTANTE: En el modo Sandbox de AWS SES, el "Source" (Remitente)
 			// DEBE ser obligatoriamente un correo verificado por ti en la consola de AWS.
 			// Para que funcione al 100% en tu defensa, usa tu propio correo verificado aquí.
 			Source: aws.String(emailData.Email), 
@@ -80,18 +80,18 @@ func handler(ctx context.Context, sqsEvent events.SQSEvent) error {
 		// 5. Despachamos el correo físico
 		_, err = sesClient.SendEmail(input)
 		if err != nil {
-			log.Printf("❌ Error crítico enviando correo mediante AWS SES: %v", err)
+			log.Printf("Error crítico enviando correo mediante AWS SES: %v", err)
 			return err
 		}
 
 		// Mantener los logs impecables para que el profesor vea la evidencia de CloudWatch
 		log.Println("-------------------------------------------------------------")
-		log.Printf("📧 ¡CORREO RECIBIDO EXITOSAMENTE!")
+		log.Printf(" ¡CORREO RECIBIDO EXITOSAMENTE!")
 		log.Printf("Para: %s", emailData.Email)
 		log.Printf("Asunto: %s", emailData.Subject)
 		log.Printf("Mensaje: %s", emailData.Message)
 		log.Println("-------------------------------------------------------------")
-		log.Printf("✅ Evento registrado con éxito en CloudWatch para ID: %s", record.MessageId)
+		log.Printf(" Evento registrado con éxito en CloudWatch para ID: %s", record.MessageId)
 	}
 
 	return nil

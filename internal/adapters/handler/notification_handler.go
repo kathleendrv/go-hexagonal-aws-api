@@ -54,7 +54,7 @@ func (h *NotificationHandler) SendNotification(w http.ResponseWriter, r *http.Re
 	}
 
 	payloadBytes, _ := json.Marshal(req)
-	log.Printf("📢 Publicando mensaje en SNS Topic: %s", h.topicArn)
+	log.Printf("Publicando mensaje en SNS Topic: %s", h.topicArn)
 
 	// Publicar directo al Tópico de SNS
 	_, err = h.snsClient.Publish(&sns.PublishInput{
@@ -63,13 +63,13 @@ func (h *NotificationHandler) SendNotification(w http.ResponseWriter, r *http.Re
 	})
 
 	if err != nil {
-		log.Printf("❌ Error publicando en SNS: %v", err)
+		log.Printf("Error publicando en SNS: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{"error": "Error al enviar mensaje."})
 		return
 	}
 
-	log.Println("✅ Mensaje distribuido con éxito a SNS")
+	log.Println("Mensaje distribuido con éxito a SNS")
 	w.WriteHeader(http.StatusOK)
 	// Respuesta exacta solicitada por la asignación para Flutter
 	json.NewEncoder(w).Encode(map[string]string{"message": "Mensaje enviado correctamente."})
