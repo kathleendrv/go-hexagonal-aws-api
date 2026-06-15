@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	"go-hexagonal-api/internal/core/domain" // Asegúrate de que coincida con tu módulo de go.mod
+	"go-hexagonal-api/internal/core/domain"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -19,14 +19,13 @@ type NotificationHandler struct {
 }
 
 func NewNotificationHandler() *NotificationHandler {
-	// Inicializamos la sesión nativa de AWS dentro de la Lambda
 	sess := session.Must(session.NewSession(&aws.Config{
 		Region: aws.String("us-east-1"),
 	}))
 	
 	return &NotificationHandler{
 		snsClient: sns.New(sess),
-		topicArn:  os.Getenv("SNS_TOPIC_ARN"), // Terraform inyectará esta variable automáticamente
+		topicArn:  os.Getenv("SNS_TOPIC_ARN"),
 	}
 }
 
@@ -35,7 +34,7 @@ func (h *NotificationHandler) SendNotification(w http.ResponseWriter, r *http.Re
 
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Método no permitido"})
+		json.NewEncoder(w).Encode(map[string]string{"error": "Error al enviar mensaje."})
 		return
 	}
 
@@ -43,21 +42,19 @@ func (h *NotificationHandler) SendNotification(w http.ResponseWriter, r *http.Re
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Cuerpo de solicitud inválido"})
+		json.NewEncoder(w).Encode(map[string]string{"error": "Error al enviar mensaje."})
 		return
 	}
 
-	// Validación Obligatoria de QA
+	// Validación de campos obligatorios
 	if req.Email == "" || req.Subject == "" || req.Message == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Todos los campos (email, subject, message) son obligatorios"})
+		json.NewEncoder(w).Encode(map[string]string{"error": "Error al enviar mensaje."})
 		return
 	}
 
-	// Convertimos la petición a string JSON para meterla en el mensaje de SNS
 	payloadBytes, _ := json.Marshal(req)
-
-	log.Printf("Publicando mensaje en SNS Topic: %s", h.topicArn)
+	log.Printf("📢 Publicando mensaje en SNS Topic: %s", h.topicArn)
 
 	// Publicar directo al Tópico de SNS
 	_, err = h.snsClient.Publish(&sns.PublishInput{
@@ -66,13 +63,14 @@ func (h *NotificationHandler) SendNotification(w http.ResponseWriter, r *http.Re
 	})
 
 	if err != nil {
-		log.Printf("Error publicando en SNS: %v", err)
+		log.Printf("❌ Error publicando en SNS: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Error interno al procesar notificación en AWS"})
+		json.NewEncoder(w).Encode(map[string]string{"error": "Error al enviar mensaje."})
 		return
 	}
 
-	log.Println("Mensaje distribuido con éxito a SNS")
+	log.Println("✅ Mensaje distribuido con éxito a SNS")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"message": "Mensaje enviado correctamente"})
+	// Respuesta exacta solicitada por la asignación para Flutter
+	json.NewEncoder(w).Encode(map[string]string{"message": "Mensaje enviado correctamente."})
 }

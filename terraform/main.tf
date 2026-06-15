@@ -192,3 +192,30 @@ resource "aws_iam_role_policy_attachment" "lambda_sns_attachment" {
   role       = aws_iam_role.lambda_role.name
   policy_arn = aws_iam_policy.lambda_sns_publish_policy.arn
 }
+# =========================================================================
+# 7. PERMISOS PARA AMAZON SES (Notification Lambda ➔ SES)
+# =========================================================================
+resource "aws_iam_policy" "lambda_ses_policy" {
+  name        = "go-hexagonal-ses-policy-${random_string.suffix.result}"
+  description = "Permite que la Lambda de notificaciones envíe correos usando AWS SES"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = [
+          "ses:SendEmail",
+          "ses:SendRawEmail"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# Adjuntamos la política de SES al rol que usan las lambdas
+resource "aws_iam_role_policy_attachment" "lambda_ses_attachment" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = aws_iam_policy.lambda_ses_policy.arn
+}
