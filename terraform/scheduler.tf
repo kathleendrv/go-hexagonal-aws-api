@@ -53,7 +53,7 @@ resource "aws_scheduler_schedule" "five_minute_schedule" {
     role_arn = aws_iam_role.scheduler_role.arn
 
     input = jsonencode({
-      email   = "tavarezcarmenrosa50@gmail.com",
+      email   = "tavarezcarmenrosa50@gmail.com", # correo 
       subject = "Ejecucion Automatica EventBridge",
       message = "Mensaje programado automaticamente cada 5 minutos por EventBridge Scheduler."
     })
