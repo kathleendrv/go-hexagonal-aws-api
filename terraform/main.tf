@@ -1,13 +1,6 @@
-
-resource "random_string" "suffix" {
-  length  = 6
-  special = false
-  upper   = false  
-}
-
 # # 1. IAM Role para la Lambda
 resource "aws_iam_role" "lambda_role" {
-  name = "go-hexagonal-lambda-role-${random_string.suffix.result}"
+  name = "go-hexagonal-lambda-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -28,7 +21,7 @@ resource "aws_iam_role_policy_attachment" "lambda_logs" {
 # # 2. La Función Lambda (Recibe el archivo zip compilado en Go)
 resource "aws_lambda_function" "api_lambda" {
   filename         = "../bootstrap.zip" # Creado por GitHub Actions
-  function_name    = "go-hexagonal-api-${random_string.suffix.result}" 
+  function_name    = "go-hexagonal-api" 
   role             = aws_iam_role.lambda_role.arn
   handler          = "bootstrap"        # Obligatorio para lambdas de Go en formato al2023
   runtime          = "provided.al2023"  # Entorno Linux optimizado de AWS
@@ -51,7 +44,7 @@ resource "aws_cloudwatch_log_group" "lambda_log_group" {
 
 # # 3. API Gateway (Para exponer la Lambda al mundo/Flutter)
 resource "aws_apigatewayv2_api" "http_api" {
-  name          = "go-hexagonal-gateway-${random_string.suffix.result}" # 🔥 Nombre dinámico automático
+  name          = "go-hexagonal-gateway" 
   protocol_type = "HTTP"
 }
 
@@ -87,14 +80,14 @@ resource "aws_lambda_permission" "api_gw_permission" {
 # 1. CONFIGURACIÓN DE SNS (Simple Notification Service)
 # =========================================================================
 resource "aws_sns_topic" "user_notifications" {
-  name = "user-notifications-topic-${random_string.suffix.result}"
+  name = "user-notifications-topic"
 }
 
 # =========================================================================
 # 2. CONFIGURACIÓN DE SQS (Simple Queue Service)
 # =========================================================================
 resource "aws_sqs_queue" "notification_queue" {
-  name                      = "notification-processing-queue-${random_string.suffix.result}"
+  name                      = "notification-processing-queue"
   delay_seconds             = 0
   max_message_size          = 262144
   message_retention_seconds = 86400 # 1 día de retención
@@ -137,7 +130,7 @@ resource "aws_sns_topic_subscription" "sns_to_sqs" {
 # =========================================================================
 resource "aws_lambda_function" "notification_lambda" {
   filename         = "../notification_bootstrap.zip" # Este ZIP lo creará GitHub Actions
-  function_name    = "notification-lambda-${random_string.suffix.result}"
+  function_name    = "notification-lambda"
   role             = aws_iam_role.lambda_role.arn # Reutilizamos el rol existente
   handler          = "bootstrap"
   runtime          = "provided.al2023"
@@ -147,7 +140,7 @@ resource "aws_lambda_function" "notification_lambda" {
 
 # Grupo de logs en CloudWatch para la nueva Lambda
 resource "aws_cloudwatch_log_group" "notification_log_group" {
-  name              = "/aws/lambda/notification-lambda-${random_string.suffix.result}"
+  name              = "/aws/lambda/notification-lambda"
   retention_in_days = 7
 }
 
@@ -170,7 +163,7 @@ resource "aws_lambda_event_source_mapping" "sqs_trigger" {
 # 6. PERMISOS DE PUBLICACIÓN (API Lambda ➔ SNS)
 # =========================================================================
 resource "aws_iam_policy" "lambda_sns_publish_policy" {
-  name        = "go-hexagonal-sns-publish-policy-${random_string.suffix.result}"
+  name        = "go-hexagonal-sns-publish-policy"
   description = "Permite que la Lambda del backend publique mensajes en SNS"
 
   policy = jsonencode({
@@ -196,7 +189,7 @@ resource "aws_iam_role_policy_attachment" "lambda_sns_attachment" {
 # 7. PERMISOS PARA AMAZON SES (Notification Lambda ➔ SES)
 # =========================================================================
 resource "aws_iam_policy" "lambda_ses_policy" {
-  name        = "go-hexagonal-ses-policy-${random_string.suffix.result}"
+  name        = "go-hexagonal-ses-policy"
   description = "Permite que la Lambda de notificaciones envíe correos usando AWS SES"
 
   policy = jsonencode({
