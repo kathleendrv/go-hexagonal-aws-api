@@ -31,11 +31,11 @@ resource "aws_iam_role_policy_attachment" "lambda_logs" {
 # 2. La Función Lambda Principal (API Backend en Go)
 # =========================================================================
 resource "aws_lambda_function" "api_lambda" {
-  filename         = "../bootstrap.zip" # Creado por GitHub Actions
-  function_name    = "go-hexagonal-api" 
+  filename         = "../bootstrap.zip"
+  function_name    = "go-hexagonal-api-${random_string.suffix.result}" # ➔ Cambiado aquí
   role             = aws_iam_role.lambda_role.arn
-  handler          = "bootstrap"        # Obligatorio para lambdas de Go en formato al2023
-  runtime          = "provided.al2023"  # Entorno Linux optimizado de AWS
+  handler          = "bootstrap"
+  runtime          = "provided.al2023"
   timeout          = 30
 
   environment {
@@ -140,9 +140,9 @@ resource "aws_sns_topic_subscription" "sns_to_sqs" {
 # 6. NUEVA LAMBDA DE NOTIFICACIONES (notification-lambda)
 # =========================================================================
 resource "aws_lambda_function" "notification_lambda" {
-  filename         = "../notification_bootstrap.zip" # Este ZIP lo creará GitHub Actions
-  function_name    = "notification-lambda"
-  role             = aws_iam_role.lambda_role.arn # Reutilizamos el rol existente con random
+  filename         = "../notification_bootstrap.zip"
+  function_name    = "notification-lambda-${random_string.suffix.result}" # ➔ Cambiado aquí
+  role             = aws_iam_role.lambda_role.arn
   handler          = "bootstrap"
   runtime          = "provided.al2023"
   architectures    = ["x86_64"]
@@ -220,5 +220,5 @@ resource "aws_iam_policy" "lambda_ses_policy" {
 # Adjuntamos la política de SES al rol que usan las lambdas
 resource "aws_iam_role_policy_attachment" "lambda_ses_attachment" {
   role       = aws_iam_role.lambda_role.name
-  policy_arn = "arn:aws:iam::aws:policy/lambda_ses_policy.arn"
+  policy_arn = aws_iam_policy.lambda_ses_policy.arn # ➔ Sintaxis corregida aquí sin comillas raras
 }
