@@ -1,6 +1,15 @@
-# # 1. IAM Role para la Lambda
+# Generador de sufijo aleatorio para evitar colisiones en pipelines sin persistencia de estado
+resource "random_string" "suffix" {
+  length  = 6
+  special = false
+  upper   = false
+}
+
+# =========================================================================
+# 1. IAM Role para la Lambda
+# =========================================================================
 resource "aws_iam_role" "lambda_role" {
-  name = "go-hexagonal-lambda-role"
+  name = "go-hexagonal-lambda-role-${random_string.suffix.result}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -18,7 +27,9 @@ resource "aws_iam_role_policy_attachment" "lambda_logs" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
-# # 2. La Función Lambda (Recibe el archivo zip compilado en Go)
+# =========================================================================
+# 2. La Función Lambda Principal (API Backend en Go)
+# =========================================================================
 resource "aws_lambda_function" "api_lambda" {
   filename         = "../bootstrap.zip" # Creado por GitHub Actions
   function_name    = "go-hexagonal-api" 
@@ -29,8 +40,8 @@ resource "aws_lambda_function" "api_lambda" {
 
   environment {
     variables = {
-      DATABASE_URL = var.database_url
-      JWT_SECRET   = var.jwt_secret
+      DATABASE_URL  = var.database_url
+      JWT_SECRET    = var.jwt_secret
       SNS_TOPIC_ARN = aws_sns_topic.user_notifications.arn
     }
   }
@@ -42,7 +53,9 @@ resource "aws_cloudwatch_log_group" "lambda_log_group" {
   retention_in_days = 7
 }
 
-# # 3. API Gateway (Para exponer la Lambda al mundo/Flutter)
+# =========================================================================
+# 3. API Gateway (Para exponer la Lambda al mundo/Flutter)
+# =========================================================================
 resource "aws_apigatewayv2_api" "http_api" {
   name          = "go-hexagonal-gateway" 
   protocol_type = "HTTP"
@@ -77,14 +90,14 @@ resource "aws_lambda_permission" "api_gw_permission" {
 }
 
 # =========================================================================
-# 1. CONFIGURACIÓN DE SNS (Simple Notification Service)
+# 4. CONFIGURACIÓN DE SNS (Simple Notification Service)
 # =========================================================================
 resource "aws_sns_topic" "user_notifications" {
-  name = "user-notifications-topic"
+  name = "user-notifications-topic-${random_string.suffix.result}"
 }
 
 # =========================================================================
-# 2. CONFIGURACIÓN DE SQS (Simple Queue Service)
+# 5. CONFIGURACIÓN DE SQS (Simple Queue Service)
 # =========================================================================
 resource "aws_sqs_queue" "notification_queue" {
   name                      = "notification-processing-queue"
@@ -116,9 +129,7 @@ resource "aws_sqs_queue_policy" "sns_to_sqs_policy" {
   })
 }
 
-# =========================================================================
-# 3. SUSCRIPCIÓN SNS ➔ SQS
-# =========================================================================
+# Suscripción SNS ➔ SQS
 resource "aws_sns_topic_subscription" "sns_to_sqs" {
   topic_arn = aws_sns_topic.user_notifications.arn
   protocol  = "sqs"
@@ -126,21 +137,21 @@ resource "aws_sns_topic_subscription" "sns_to_sqs" {
 }
 
 # =========================================================================
-# 4. NUEVA LAMBDA DE NOTIFICACIONES (notification-lambda)
+# 6. NUEVA LAMBDA DE NOTIFICACIONES (notification-lambda)
 # =========================================================================
 resource "aws_lambda_function" "notification_lambda" {
   filename         = "../notification_bootstrap.zip" # Este ZIP lo creará GitHub Actions
   function_name    = "notification-lambda"
-  role             = aws_iam_role.lambda_role.arn # Reutilizamos el rol existente
+  role             = aws_iam_role.lambda_role.arn # Reutilizamos el rol existente con random
   handler          = "bootstrap"
   runtime          = "provided.al2023"
   architectures    = ["x86_64"]
   timeout          = 30
 }
 
-# Grupo de logs en CloudWatch para la nueva Lambda
+# Grupo de logs en CloudWatch con sufijo aleatorio para evitar conflictos de log-groups
 resource "aws_cloudwatch_log_group" "notification_log_group" {
-  name              = "/aws/lambda/notification-lambda"
+  name              = "/aws/lambda/notification-lambda-${random_string.suffix.result}"
   retention_in_days = 7
 }
 
@@ -150,9 +161,7 @@ resource "aws_iam_role_policy_attachment" "lambda_sqs_execution" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole"
 }
 
-# =========================================================================
-# 5. EVENT SOURCE MAPPING (SQS ➔ Lambda)
-# =========================================================================
+# Event Source Mapping (SQS ➔ Lambda)
 resource "aws_lambda_event_source_mapping" "sqs_trigger" {
   event_source_arn = aws_sqs_queue.notification_queue.arn
   function_name    = aws_lambda_function.notification_lambda.arn
@@ -160,10 +169,10 @@ resource "aws_lambda_event_source_mapping" "sqs_trigger" {
 }
 
 # =========================================================================
-# 6. PERMISOS DE PUBLICACIÓN (API Lambda ➔ SNS)
+# 7. PERMISOS DE PUBLICACIÓN (API Lambda ➔ SNS)
 # =========================================================================
 resource "aws_iam_policy" "lambda_sns_publish_policy" {
-  name        = "go-hexagonal-sns-publish-policy"
+  name        = "go-hexagonal-sns-publish-policy-${random_string.suffix.result}"
   description = "Permite que la Lambda del backend publique mensajes en SNS"
 
   policy = jsonencode({
@@ -185,11 +194,12 @@ resource "aws_iam_role_policy_attachment" "lambda_sns_attachment" {
   role       = aws_iam_role.lambda_role.name
   policy_arn = aws_iam_policy.lambda_sns_publish_policy.arn
 }
+
 # =========================================================================
-# 7. PERMISOS PARA AMAZON SES (Notification Lambda ➔ SES)
+# 8. PERMISOS PARA AMAZON SES (Notification Lambda ➔ SES)
 # =========================================================================
 resource "aws_iam_policy" "lambda_ses_policy" {
-  name        = "go-hexagonal-ses-policy"
+  name        = "go-hexagonal-ses-policy-${random_string.suffix.result}"
   description = "Permite que la Lambda de notificaciones envíe correos usando AWS SES"
 
   policy = jsonencode({
@@ -210,5 +220,5 @@ resource "aws_iam_policy" "lambda_ses_policy" {
 # Adjuntamos la política de SES al rol que usan las lambdas
 resource "aws_iam_role_policy_attachment" "lambda_ses_attachment" {
   role       = aws_iam_role.lambda_role.name
-  policy_arn = aws_iam_policy.lambda_ses_policy.arn
+  policy_arn = "arn:aws:iam::aws:policy/lambda_ses_policy.arn"
 }

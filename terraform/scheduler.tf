@@ -1,6 +1,6 @@
 # 1. Crear el Rol de IAM para EventBridge
 resource "aws_iam_role" "scheduler_role" {
-  name = "utesa-eventbridge-sns-scheduler-role"
+  name = "utesa-eventbridge-sns-scheduler-role-${random_string.suffix.result}" # ➔ Con random
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -14,9 +14,9 @@ resource "aws_iam_role" "scheduler_role" {
   })
 }
 
-# 2. Política de IAM apuntando a tu SNS de tu main.tf (user_notifications)
+# 2. Política de IAM apuntando a tu SNS
 resource "aws_iam_policy" "scheduler_sns_policy" {
-  name        = "utesa-eventbridge-scheduler-sns-policy"
+  name        = "utesa-eventbridge-scheduler-sns-policy-${random_string.suffix.result}" # ➔ Con random
   description = "Permite a EventBridge Scheduler publicar en el topico SNS"
 
   policy = jsonencode({
@@ -25,7 +25,7 @@ resource "aws_iam_policy" "scheduler_sns_policy" {
       {
         Effect   = "Allow"
         Action   = "sns:Publish"
-        Resource = aws_sns_topic.user_notifications.arn # ➔ Cambiado para coincidir con tu main.tf
+        Resource = aws_sns_topic.user_notifications.arn
       }
     ]
   })
@@ -39,7 +39,7 @@ resource "aws_iam_role_policy_attachment" "scheduler_attach" {
 
 # 4. Configurar el Amazon EventBridge Scheduler (Ejecución cada 5 minutos)
 resource "aws_scheduler_schedule" "five_minute_schedule" {
-  name        = "utesa-notification-cron-every-5-minutes"
+  name        = "utesa-notification-cron-every-5-minutes-${random_string.suffix.result}" # ➔ Con random
   group_name  = "default"
 
   schedule_expression = "rate(5 minutes)"
@@ -49,11 +49,11 @@ resource "aws_scheduler_schedule" "five_minute_schedule" {
   }
 
   target {
-    arn      = aws_sns_topic.user_notifications.arn # ➔ Cambiado para coincidir con tu main.tf
+    arn      = aws_sns_topic.user_notifications.arn
     role_arn = aws_iam_role.scheduler_role.arn
 
     input = jsonencode({
-      email   = "tavarezcarmenrosa50@gmail.com", #correo
+      email   = "tavarezcarmenrosa50@gmail.com",
       subject = "Ejecucion Automatica EventBridge",
       message = "Mensaje programado automaticamente cada 5 minutos por EventBridge Scheduler."
     })
