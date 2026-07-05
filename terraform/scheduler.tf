@@ -1,6 +1,6 @@
 # 1. Crear el Rol de IAM para EventBridge
 resource "aws_iam_role" "scheduler_role" {
-  name = "utesa-eventbridge-sns-scheduler-role"
+  name = "utesa-eventbridge-sns-scheduler-role-v2"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
